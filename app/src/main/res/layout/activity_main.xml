@@ -11,7 +11,7 @@
         android:id="@+id/watch"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:colorBackgroundClockFaceHand="@color/purple_200"
+        app:lineSecondHandSize="120dp"
         app:colorHourHand="@color/design_default_color_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

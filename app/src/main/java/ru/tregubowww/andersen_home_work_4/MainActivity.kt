@@ -12,6 +12,5 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         watchView = findViewById(R.id.watch)
-        watchView.startTime()
     }
 }

@@ -6,20 +6,18 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import androidx.annotation.ColorLong
 import androidx.annotation.DimenRes
 import androidx.core.content.withStyledAttributes
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.min
 
 class WatchView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defaultAttributeSet: Int = 0
+    defaultAttributeSet: Int = 0,
 ) : View(context, attrs, defaultAttributeSet) {
+
 
     private var colorHourHand = 0
     private var colorMinuteHand = 0
@@ -29,11 +27,6 @@ class WatchView @JvmOverloads constructor(
     private var customSizeLineHourHand = 0
     private var customSizeLineMinuteHand = 0
     private var customSizeLineSecondHand = 0
-
-    private val time = Calendar.getInstance()
-    private var hour = time.get(Calendar.HOUR)
-    private var minute = time.get(Calendar.MINUTE)
-    private var second = time.get(Calendar.SECOND)
 
     private lateinit var painterClockFace: Paint
     private lateinit var painterHourHand: Paint
@@ -50,11 +43,11 @@ class WatchView @JvmOverloads constructor(
             colorSecondHand = getColor(R.styleable.WatchView_colorSecondHand, Color.RED)
             colorClockFace = getColor(R.styleable.WatchView_colorClockFaceHand, Color.BLACK)
             colorBackgroundClockFace = getColor(R.styleable.WatchView_colorBackgroundClockFaceHand, Color.WHITE)
-            customSizeLineHourHand = getDimensionPixelSize(R.styleable.WatchView_lineHourHandSize, 0)
-            customSizeLineMinuteHand = getDimensionPixelSize(R.styleable.WatchView_lineMinuteHandSize, 0)
-            customSizeLineSecondHand = getDimensionPixelSize(R.styleable.WatchView_lineSecondHandSize, 0)
+            customSizeLineHourHand = getDimensionPixelSize( R.styleable.WatchView_lineHourHandSize, 0)
+            customSizeLineMinuteHand = getDimensionPixelSize( R.styleable.WatchView_lineMinuteHandSize, 0)
+            customSizeLineSecondHand = getDimensionPixelSize( R.styleable.WatchView_lineSecondHandSize, 0)
         }
-        
+
         initPainters()
     }
 
@@ -62,37 +55,51 @@ class WatchView @JvmOverloads constructor(
 
         paintersSetStrokeWith()
 
-        val radius = min(width, height) / 2 * 0.9f
+        val indent = 0.9f
+        val radius = min(width, height) / 2f * indent
         val xCenter = width / 2f
         val yCenter = height / 2f
 
-        val yStartClockFace = height / 2 - radius * 0.9f
+        val yStartClockFace = height / 2 - radius * indent
         val yEndClockFace = height / 2 - radius
 
-        val lineHourHand = choiceSize(customSizeLineHourHand, radius, radius * 0.4f)
-        val yStartHourHand = yCenter + lineHourHand * 0.2f
+        val lengthBackArrows = 0.2f
+
+        val defaultSizeLineHourHand = radius * 0.4f
+        val lineHourHand = choiceSize(customSizeLineHourHand, radius, defaultSizeLineHourHand)
+        val yStartHourHand = yCenter + lineHourHand * lengthBackArrows
         val yEndHourHand = yCenter - lineHourHand
 
-        val lineMinuteHand = choiceSize(customSizeLineMinuteHand, radius, radius * 0.6f)
-        val yStartMinuteHand = yCenter + lineMinuteHand * 0.2f
+        val defaultSizeLineMinuteHand = radius * 0.6f
+        val lineMinuteHand = choiceSize(customSizeLineMinuteHand, radius, defaultSizeLineMinuteHand)
+        val yStartMinuteHand = yCenter + lineMinuteHand * lengthBackArrows
         val yEndMinuteHand = yCenter - lineMinuteHand
 
-        val lineSecondHand = choiceSize(customSizeLineSecondHand, radius, radius * 0.9f)
-        val yStartSecondHand = yCenter + lineSecondHand * 0.2f
+        val defaultSizeLineSecondHand = radius * 0.9f
+        val lineSecondHand = choiceSize(customSizeLineSecondHand, radius, defaultSizeLineSecondHand)
+        val yStartSecondHand = yCenter + lineSecondHand * lengthBackArrows
         val yEndSecondHand = yCenter - lineSecondHand
 
-        val angleHour = hour * 30f
-        val angleMinute = minute * 6f + (360 - angleHour)
-        val angleSecond = second * 6f + (360 - minute *6f)
+        val time = Calendar.getInstance()
+        val hour = time.get(Calendar.HOUR)
+        val minute = time.get(Calendar.MINUTE)
+        val second = time.get(Calendar.SECOND)
+
+        val stepHourAngle = 30f
+        val stepMinuteAndSecondAngle = 6f
+        val stepWatch= 60f
+        val angleHour = hour * stepHourAngle + stepHourAngle / stepWatch * minute
+        val angleMinute = minute * stepMinuteAndSecondAngle + stepMinuteAndSecondAngle / stepWatch * second
+        val angleSecond = second * stepMinuteAndSecondAngle
 
         canvas?.apply {
 
-            drawCircle(xCenter, yCenter, radius, painterBackgroundClockFace)
+            drawCircle(xCenter, yCenter, radius , painterBackgroundClockFace)
             drawCircle(xCenter, yCenter, radius, painterClockFace)
 
             for (i in 0..11) {
                 drawLine(xCenter, yStartClockFace, xCenter, yEndClockFace, painterClockFace)
-                rotate(30f, xCenter, yCenter)
+                rotate(stepHourAngle, xCenter, yCenter)
             }
 
             rotate(angleHour, xCenter, yCenter)
@@ -104,6 +111,7 @@ class WatchView @JvmOverloads constructor(
             rotate(angleSecond, xCenter, yCenter)
             drawLine(xCenter, yStartSecondHand, xCenter, yEndSecondHand, painterSecondHand)
         }
+        invalidate()
     }
 
     override fun onDetachedFromWindow() {
@@ -112,42 +120,27 @@ class WatchView @JvmOverloads constructor(
 
     }
 
-    fun startTime() {
-        isStopWatch = false
-        CoroutineScope(Dispatchers.Main).launch {
-            while (!isStopWatch) {
-                delay(1000)
-                val time = Calendar.getInstance()
-                hour = time.get(Calendar.HOUR)
-                minute = time.get(Calendar.MINUTE)
-                second = time.get(Calendar.SECOND)
-                invalidate()
-            }
-        }
-
-    }
-
-    fun setColorHourHand(color: Int) {
+    fun setColorHourHand(@ColorLong color: Int) {
         painterHourHand.color = color
         invalidate()
     }
 
-    fun setColorMinuteHand(color: Int) {
+    fun setColorMinuteHand(@ColorLong color: Int) {
         painterMinuteHand.color = color
         invalidate()
     }
 
-    fun setColorSecondHand(color: Int) {
+    fun setColorSecondHand(@ColorLong color: Int) {
         painterSecondHand.color = color
         invalidate()
     }
 
-    fun setColorClockFace(color: Int) {
+    fun setColorClockFace(@ColorLong color: Int) {
         painterClockFace.color = color
         invalidate()
     }
 
-    fun setColorBackgroundClockFace(color: Int) {
+    fun setColorBackgroundClockFace(@DimenRes color: Int) {
         painterBackgroundClockFace.color = color
         invalidate()
     }
@@ -202,12 +195,15 @@ class WatchView @JvmOverloads constructor(
     }
 
     private fun choiceSize(customSizeHand: Int, radius: Float, size: Float) = if (customSizeHand == 0) size
-    else min( customSizeHand.toFloat(), radius)
+    else min(customSizeHand.toFloat(), radius)
 
     private fun paintersSetStrokeWith() {
-        painterClockFace.strokeWidth = min(width, height) / 50f
-        painterHourHand.strokeWidth = min(width, height) / 50f
-        painterMinuteHand.strokeWidth = min(width, height) / 100f
-        painterSecondHand.strokeWidth = min(width, height) / 120f
+        val thicknessClockFaceAndHourHand = 50f
+        val thicknessMinuteHand = 100f
+        val thicknessSecondHand = 100f
+        painterClockFace.strokeWidth = min(width, height) / thicknessClockFaceAndHourHand
+        painterHourHand.strokeWidth = min(width, height) / thicknessClockFaceAndHourHand
+        painterMinuteHand.strokeWidth = min(width, height) / thicknessMinuteHand
+        painterSecondHand.strokeWidth = min(width, height) / thicknessSecondHand
     }
 }
